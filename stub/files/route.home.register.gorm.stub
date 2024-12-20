@@ -1,0 +1,82 @@
+package home
+
+import (
+	"errors"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/wolftotem4/golava-core/auth"
+	"github.com/wolftotem4/golava-core/auth/generic"
+	"github.com/wolftotem4/golava-core/instance"
+	t "github.com/wolftotem4/golava-core/template"
+	"github.com/wolftotem4/golava/internal/app"
+	"github.com/wolftotem4/golava/internal/binding"
+	"gorm.io/gorm"
+)
+
+func RegisterView(c *gin.Context) {
+	i := instance.MustGetInstance(c)
+
+	c.HTML(http.StatusOK, "home/register.tmpl", t.Default(c).Wrap(t.H{
+		"alert-success": i.Session.Store.Attributes["alert-success"],
+		"alert-error":   i.Session.Store.Attributes["alert-error"],
+	}))
+}
+
+func Register(c *gin.Context) {
+	var (
+		i   = instance.MustGetInstance(c)
+		app = i.App.(*app.App)
+	)
+
+	statefulGuard, ok := i.Auth.(auth.StatefulGuard)
+	if !ok {
+		c.Error(errors.New("auth does not implement StatefulGuard"))
+		return
+	}
+
+	var form binding.Register
+	if err := c.ShouldBind(&form); err != nil {
+		i.Session.Store.FlashInput(form)
+		c.Error(err)
+		return
+	}
+
+	result := app.DB.Model(&generic.User{}).Where("username = ?", form.Username).First(&form)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		// do nothing
+	} else if result.Error != nil {
+		i.Session.Store.FlashInput(form)
+		c.Error(result.Error)
+		return
+	} else {
+		i.Session.Store.Flash("alert-error", "Username already exists")
+		i.Session.Store.FlashInput(form)
+		i.Redirector.Back(http.StatusSeeOther, "register")
+		return
+	}
+
+	hash, err := app.Hashing.Make(form.Password)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	user := &generic.User{
+		Username: form.Username,
+		Password: hash,
+	}
+
+	if result := app.DB.Create(user); result.Error != nil {
+		c.Error(result.Error)
+		return
+	}
+
+	err = statefulGuard.Login(c, user, false)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.Redirect(http.StatusSeeOther, app.Router.URL("/").String())
+}

@@ -1,0 +1,37 @@
+package middlewares
+
+import (
+	"time"
+
+{{.packages}}
+)
+
+func WebAuth(c *gin.Context) {
+	const (
+		DAY = 24 * time.Hour
+	)
+
+	var (
+		instance = instance.MustGetInstance(c)
+		app      = instance.App.(*app.App)
+	)
+
+	guard := &generic.SessionGuard{
+		Name:             "app",
+		Session:          instance.Session,
+		Cookie:           app.Cookie,
+		RememberDuration: 400 * DAY,
+		Provider: {{.userProvider}},
+
+		Request: c.Request,
+	}
+
+	instance.Auth = guard
+
+	err := guard.RestoreAuth(c)
+	if err != nil {
+		c.Error(err)
+		c.Abort()
+		return
+	}
+}

@@ -1,0 +1,14 @@
+package app
+
+import (
+{{.packages}}
+)
+
+type App struct {
+	golava.App
+	DB {{.dbType}}
+}
+
+func (a *App) Base() *golava.App {
+	return &a.App
+}
