@@ -19,7 +19,7 @@ import (
 )
 
 const GIT_REMOTE = "https://github.com/wolftotem4/golava.git"
-const VERSION = "v0.1.1"
+const VERSION = "v0.1.2"
 
 func init() {
 	flag.Usage = usage
