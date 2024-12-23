@@ -1,0 +1,90 @@
+package entauth
+
+import (
+	"context"
+	"crypto/subtle"
+
+	"github.com/wolftotem4/golava-core/auth"
+	"github.com/wolftotem4/golava-core/hashing"
+	"github.com/wolftotem4/golava/ent"
+	"github.com/wolftotem4/golava/ent/user"
+)
+
+type EntUserProvider struct {
+	Ent    *ent.Client
+	Hasher hashing.Hasher
+}
+
+func (p *EntUserProvider) RetrieveById(ctx context.Context, identifier any) (auth.Authenticatable, error) {
+	user, err := p.Ent.User.Query().Where(user.ID(identifier.(int))).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, auth.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &User{user}, nil
+}
+
+func (p *EntUserProvider) RetrieveByToken(ctx context.Context, identifier any, token string) (auth.Authenticatable, error) {
+	user, err := p.Ent.User.Query().Where(user.ID(identifier.(int))).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, auth.ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	if subtle.ConstantTimeCompare([]byte(token), []byte(user.RememberToken)) != 1 {
+		return nil, auth.ErrUserNotFound
+	}
+
+	return &User{user}, nil
+}
+
+func (p *EntUserProvider) UpdateRememberToken(ctx context.Context, user auth.Authenticatable, token string) error {
+	u := user.(*User)
+	_, err := p.Ent.User.UpdateOne(u.User).SetRememberToken(token).Save(ctx)
+	return err
+}
+
+func (p *EntUserProvider) RetrieveByCredentials(ctx context.Context, credentials map[string]any) (auth.Authenticatable, error) {
+	username, ok := credentials["username"].(string)
+	if !ok {
+		return nil, auth.ErrUserNotFound
+	}
+
+	user, err := p.Ent.User.Query().Where(user.Username(username)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, auth.ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	return &User{user}, nil
+}
+
+func (p *EntUserProvider) ValidateCredentials(ctx context.Context, user auth.Authenticatable, credentials map[string]any) (bool, error) {
+	password, ok := credentials[user.GetAuthPasswordName()]
+	if !ok {
+		return false, nil
+	}
+
+	return p.Hasher.Check(password.(string), user.GetAuthPassword())
+}
+
+func (p *EntUserProvider) RehashPasswordIfRequired(ctx context.Context, user auth.Authenticatable, credentials map[string]any, force bool) error {
+	if !p.Hasher.NeedsRehash(user.GetAuthPassword()) && !force {
+		return nil
+	}
+
+	hash, err := p.Hasher.Make(credentials[user.GetAuthPasswordName()].(string))
+	if err != nil {
+		return err
+	}
+
+	u := user.(*User)
+	_, err = p.Ent.User.UpdateOne(u.User).SetPassword(hash).Save(ctx)
+	return err
+}

@@ -1,6 +1,9 @@
 package db
 
-import "github.com/wolftotem4/golava-new/internal/pkg"
+import (
+	"github.com/wolftotem4/golava-new/internal/app"
+	"github.com/wolftotem4/golava-new/internal/pkg"
+)
 
 type DBType struct {
 	Name                string
@@ -10,9 +13,11 @@ type DBType struct {
 	UserProvider        string
 	MapDBDriver         MapDBDriver
 	MapDBSessionHandler MapDBSessionHandler
+	AppExts             []app.AppExt
 }
 
 var Data = map[string]DBType{
 	DBTypeSQLX.Name: DBTypeSQLX,
 	DBTypeGORM.Name: DBTypeGORM,
+	DBTypeEnt.Name:  DBTypeEnt,
 }

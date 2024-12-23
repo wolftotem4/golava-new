@@ -39,3 +39,17 @@ func (p PackageImports) String() string {
 func (p *PackageImports) Add(pkg PackageImport) {
 	*p = append(*p, pkg)
 }
+
+func (p *PackageImports) Unique() {
+	m := make(map[PackageImport]struct{})
+	for _, pkg := range *p {
+		m[pkg] = struct{}{}
+	}
+
+	var unique PackageImports
+	for pkg := range m {
+		unique = append(unique, pkg)
+	}
+
+	*p = unique
+}

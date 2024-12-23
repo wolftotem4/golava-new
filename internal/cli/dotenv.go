@@ -14,7 +14,7 @@ const DotEnvExample = ".env.example"
 
 var ErrOverwriteRejected = errors.New("overwrite rejected")
 
-func SetupDotEnvFile(dir string) error {
+func CreateDotEnvFileAndLoad(dir string) error {
 	file := path.Join(dir, DotEnvFile)
 
 	if _, err := os.Stat(file); err == nil {

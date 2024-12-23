@@ -21,11 +21,18 @@ func ForgeAppGo(ctx context.Context, args forge.ForgeWorkArgs) (gofile string, f
 			{Path: "github.com/wolftotem4/golava-core/golava"},
 			args.DBType.Package,
 		}
+
+		for _, ext := range args.DBType.AppExts {
+			packages = append(packages, ext.Packages...)
+		}
+
+		packages.Unique()
 		sort.Sort(packages)
 
 		return parseTemplate("app.db.stub", demo, map[string]any{
 			"packages": packages.String(),
 			"dbType":   args.DBType.Handler,
+			"exts":     args.DBType.AppExts,
 		})
 	}, nil
 }

@@ -8,12 +8,17 @@ import (
 )
 
 func ForgeRouteHomeRegister(ctx context.Context, args forge.ForgeWorkArgs) (gofile string, forge func(ctx context.Context) error, err error) {
+	const target = "internal/routes/home/register.go"
+
 	switch args.DBType.Name {
 	case "sqlx":
-		worker := CopyGoFile("route.home.register.sqlx.stub", "routes/home/register.go")
+		worker := CopyFile("route.home.register.sqlx.stub", target)
 		return worker(ctx, args)
 	case "gorm":
-		worker := CopyGoFile("route.home.register.gorm.stub", "routes/home/register.go")
+		worker := CopyFile("route.home.register.gorm.stub", target)
+		return worker(ctx, args)
+	case "ent":
+		worker := CopyFile("route.home.register.ent.stub", target)
 		return worker(ctx, args)
 	}
 

@@ -6,7 +6,8 @@ import (
 
 type App struct {
 	golava.App
-	DB {{.dbType}}
+	DB {{.dbType}}{{range .exts}}
+	{{.Name}} {{.Declare}}{{end}}
 }
 
 func (a *App) Base() *golava.App {

@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
 {{.packages}}
 )
 
@@ -53,7 +52,8 @@ func InitApp(ctx context.Context) (*app.App, error) {
 	cookie := cookie.NewEncryptableCookieManager(initCookie(), encrypter)
 
 	return &app.App{
-		DB: db,
+		DB: db,{{range .exts}}
+		{{.Name}}: {{.Init}},{{end}}
 		App: golava.App{
 			Name:           os.Getenv("APP_NAME"),
 			Debug:          debug,
