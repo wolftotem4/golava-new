@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 
 	"github.com/pkg/errors"
@@ -12,7 +12,7 @@ import (
 const DotEnvFile = ".env"
 
 func SetKeyInEnvironmentFile(dir, key, value string) error {
-	file := path.Join(dir, DotEnvFile)
+	file := filepath.Join(dir, DotEnvFile)
 
 	content, err := os.ReadFile(file)
 	if err != nil {

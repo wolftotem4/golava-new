@@ -3,7 +3,7 @@ package stub
 import (
 	"context"
 	"os"
-	"path"
+	"path/filepath"
 	"sort"
 
 	"github.com/wolftotem4/golava-new/internal/forge"
@@ -11,7 +11,7 @@ import (
 )
 
 func ForgeAppGo(ctx context.Context, args forge.ForgeWorkArgs) (gofile string, forge func(ctx context.Context) error, err error) {
-	var file = path.Join(args.Dir, "internal/app/app.go")
+	var file = filepath.Join(args.Dir, "internal/app/app.go")
 
 	return file, func(ctx context.Context) error {
 		demo, _ := os.Create(file)

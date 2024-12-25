@@ -3,7 +3,7 @@ package stub
 import (
 	"context"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 
@@ -12,7 +12,7 @@ import (
 )
 
 func ForgeMiddlewareAuth(ctx context.Context, args forge.ForgeWorkArgs) (gofile string, forge func(ctx context.Context) error, err error) {
-	var file = path.Join(args.Dir, "internal/middlewares/auth.go")
+	var file = filepath.Join(args.Dir, "internal/middlewares/auth.go")
 
 	return file, func(ctx context.Context) error {
 		code, _ := os.Create(file)

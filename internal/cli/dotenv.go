@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
@@ -15,7 +15,7 @@ const DotEnvExample = ".env.example"
 var ErrOverwriteRejected = errors.New("overwrite rejected")
 
 func CreateDotEnvFileAndLoad(dir string) error {
-	file := path.Join(dir, DotEnvFile)
+	file := filepath.Join(dir, DotEnvFile)
 
 	if _, err := os.Stat(file); err == nil {
 		overwrite := ConfirmDotEnvOverwrite()
@@ -39,8 +39,8 @@ func CreateDotEnvFileAndLoad(dir string) error {
 }
 
 func CopyEnvFile(dir string, overwrite bool) error {
-	src := path.Join(dir, DotEnvExample)
-	dst := path.Join(dir, DotEnvFile)
+	src := filepath.Join(dir, DotEnvExample)
+	dst := filepath.Join(dir, DotEnvFile)
 
 	if _, err := os.Stat(dst); err == nil && !overwrite {
 		return errors.WithStack(os.ErrExist)
@@ -72,5 +72,5 @@ func ConfirmDotEnvOverwrite() bool {
 }
 
 func ReloadDotEnv(dir string) error {
-	return errors.WithStack(godotenv.Load(path.Join(dir, DotEnvFile)))
+	return errors.WithStack(godotenv.Load(filepath.Join(dir, DotEnvFile)))
 }

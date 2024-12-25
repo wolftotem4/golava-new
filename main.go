@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"context"
 	"encoding/base64"
 	"errors"
@@ -8,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -22,7 +22,7 @@ import (
 )
 
 const GIT_REMOTE = "https://github.com/wolftotem4/golava.git"
-const VERSION = "v0.1.4"
+const VERSION = "v0.1.5"
 
 var migrations = []string{
 	"1732165783_users.down.sql",
@@ -50,7 +50,7 @@ func main() {
 
 	dir := getProjectDir()
 
-	cloneProject(dir)
+	createProject(dir)
 	setupDotEnvFile(dir)
 	dbType := askDBType()
 	forgeGoFiles(ctx, dir, dbType)
@@ -117,7 +117,8 @@ func prepareForges(ctx context.Context, dir string, dbType db.DBType) ([]string,
 
 	workers := forge.ForgeWorkers{
 		stub.ForgeAppGo,
-		stub.ForgeBootstrapApp,
+		stub.ForgeBootstrap,
+		stub.ForgeBootstrapSession,
 		stub.ForgeMiddlewareAuth,
 		stub.ForgeRouteHomeRegister,
 	}
@@ -131,13 +132,18 @@ func prepareForges(ctx context.Context, dir string, dbType db.DBType) ([]string,
 		)
 	}
 
-	switch args.DBDriver {
+	driver := args.DBDriver
+	if driver == "sqlite3" {
+		driver = "sqlite"
+	}
+
+	switch driver {
 	case "sqlite", "mysql", "postgres":
 		for _, filename := range migrations {
 			workers = append(
 				workers,
 				stub.CopyFile(
-					fmt.Sprintf("migrations.%s/%s", args.DBDriver, filename),
+					fmt.Sprintf("migrations.%s/%s", driver, filename),
 					fmt.Sprintf("database/migrations/%s", filename),
 				),
 			)
@@ -202,15 +208,6 @@ func getProjectDir() string {
 	return dir
 }
 
-func cloneProject(dir string) {
-	if err := gitClone(GIT_REMOTE, dir); err != nil {
-		fmt.Printf("git clone failed: %s\n", err.Error())
-		os.Exit(1)
-	}
-
-	deleteGitRepo(dir)
-}
-
 func run(dir string, processes ...func(dir string) error) error {
 	for _, process := range processes {
 		if err := process(dir); err != nil {
@@ -241,10 +238,6 @@ func gitClone(remote string, project string) error {
 	return cmd.Run()
 }
 
-func deleteGitRepo(dir string) error {
-	return os.RemoveAll(path.Join(dir, "/.git"))
-}
-
 func runGoModTidy(dir string) {
 	fmt.Println("Running go mod tidy...")
 
@@ -263,6 +256,90 @@ func runGoGenerateEnt(dir string) {
 	cmd.Dir = dir
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("go generate ./ent failed: %s\n", err.Error())
+		os.Exit(1)
+	}
+}
+
+func createProject(dir string) {
+	zipFile := fmt.Sprintf("golava-%s.zip", VERSION)
+
+	downloadFile(
+		fmt.Sprintf("https://github.com/wolftotem4/golava/archive/refs/tags/%s.zip", VERSION),
+		zipFile,
+	)
+
+	unzipGithubProject(dir, zipFile)
+
+	deleteFile(zipFile)
+}
+
+func unzipGithubProject(dir string, zipFile string) {
+	archive, err := zip.OpenReader(zipFile)
+	if err != nil {
+		fmt.Printf("Open zip file failed: %s\n", err.Error())
+		os.Exit(1)
+	}
+	defer archive.Close()
+
+	pathPrefix := archive.File[0].Name
+
+	for _, file := range archive.File {
+		if file.FileInfo().IsDir() {
+			continue
+		}
+
+		src, err := file.Open()
+		if err != nil {
+			fmt.Printf("Open file failed: %s\n", err.Error())
+			os.Exit(1)
+		}
+		defer src.Close()
+
+		path := strings.TrimPrefix(file.Name, pathPrefix)
+
+		err = os.MkdirAll(filepath.Join(dir, filepath.Dir(path)), os.ModePerm)
+		if err != nil {
+			fmt.Printf("Create folder failed: %s\n", err.Error())
+			os.Exit(1)
+		}
+
+		dst, err := os.Create(filepath.Join(dir, path))
+		if err != nil {
+			fmt.Printf("Create file failed: %s\n", err.Error())
+			os.Exit(1)
+		}
+		defer dst.Close()
+
+		_, err = dst.ReadFrom(src)
+		if err != nil {
+			fmt.Printf("Read file failed: %s\n", err.Error())
+			os.Exit(1)
+		}
+	}
+}
+
+func createProjectFolder(dir string) {
+	err := os.Mkdir(dir, os.ModePerm)
+	if err != nil {
+		fmt.Printf("Create project folder failed: %s\n", err.Error())
+		os.Exit(1)
+	}
+}
+
+func downloadFile(url string, file string) {
+	if _, err := os.Stat(file); os.IsNotExist(err) {
+		err := cli.Download(url, file)
+		if err != nil {
+			fmt.Printf("Download failed: %s\n", err.Error())
+			os.Exit(1)
+		}
+	}
+}
+
+func deleteFile(file string) {
+	err := os.Remove(file)
+	if err != nil {
+		fmt.Printf("Delete file failed: %s\n", err.Error())
 		os.Exit(1)
 	}
 }
