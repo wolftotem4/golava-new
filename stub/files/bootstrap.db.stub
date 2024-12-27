@@ -67,7 +67,7 @@ func InitApp(ctx context.Context) (*app.App, error) {
 	}, nil
 }
 {{if eq .dbTypeName "ent"}}
-func getDBDriver() string {
+func getEntDBDriver() string {
 	driver := os.Getenv("DB_DRIVER")
 
 	switch driver {

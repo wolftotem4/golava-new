@@ -41,7 +41,7 @@ var DBTypeEnt = DBType{
 			InitPkgs: pkg.PackageImports{{Alias: "entsql", Path: "entgo.io/ent/dialect/sql"}},
 			Declare:  "*ent.Client",
 			Name:     "Ent",
-			Init:     `ent.NewClient(ent.Driver(entsql.OpenDB(os.Getenv("DB_DRIVER"), db)))`,
+			Init:     `ent.NewClient(ent.Driver(entsql.OpenDB(getEntDBDriver(), db)))`,
 		},
 	},
 }
