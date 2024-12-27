@@ -24,7 +24,7 @@ func InitApp(ctx context.Context) (*app.App, error) {
 		return nil, err
 	}
 
-	router, err := router.NewRouter("/")
+	router, err := routing.NewRouter("/")
 	if err != nil {
 		return nil, err
 	}

@@ -22,7 +22,7 @@ import (
 )
 
 const GIT_REMOTE = "https://github.com/wolftotem4/golava.git"
-const VERSION = "v0.1.5"
+const VERSION = "v0.1.6"
 
 var migrations = []string{
 	"1732165783_users.down.sql",
