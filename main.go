@@ -22,7 +22,7 @@ import (
 )
 
 const GIT_REMOTE = "https://github.com/wolftotem4/golava.git"
-const VERSION = "v0.1.6"
+const VERSION = "v0.1.7"
 
 var migrations = []string{
 	"1732165783_users.down.sql",
@@ -117,7 +117,7 @@ func prepareForges(ctx context.Context, dir string, dbType db.DBType) ([]string,
 
 	workers := forge.ForgeWorkers{
 		stub.ForgeAppGo,
-		stub.ForgeBootstrap,
+		stub.ForgeBootstrapApp,
 		stub.ForgeBootstrapSession,
 		stub.ForgeMiddlewareAuth,
 		stub.ForgeRouteHomeRegister,
