@@ -1,0 +1,6 @@
+db:
+  # Specify the driver of your DB (sqlite/mysql/postgres)
+  driver: mysql
+
+  # Specify the type of DB package you want to use (sqlx/gorm/ent)
+  type: sqlx

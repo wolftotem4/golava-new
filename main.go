@@ -1,28 +1,28 @@
 package main
 
 import (
-	"archive/zip"
 	"context"
-	"encoding/base64"
+	"embed"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 
-	"github.com/wolftotem4/golava-core/encryption"
-	"github.com/wolftotem4/golava-new/internal/cli"
-	"github.com/wolftotem4/golava-new/internal/cli/question"
+	"github.com/wolftotem4/golava-new/internal/cli/cloneproj"
+	"github.com/wolftotem4/golava-new/internal/cli/dotenv"
+	"github.com/wolftotem4/golava-new/internal/cli/gomod"
+	"github.com/wolftotem4/golava-new/internal/cli/setup"
 	"github.com/wolftotem4/golava-new/internal/db"
-	"github.com/wolftotem4/golava-new/internal/forge"
-	"github.com/wolftotem4/golava-new/stub"
+	"golang.org/x/mod/module"
 )
 
-const GIT_REMOTE = "https://github.com/wolftotem4/golava.git"
-const VERSION = "v0.1.7"
+var remoteProj = cloneproj.CloneProject{
+	Remote:  "https://github.com/wolftotem4/golava/archive/refs/tags/%s.zip",
+	Version: "v0.1.8",
+}
 
 var migrations = []string{
 	"1732165783_users.down.sql",
@@ -31,51 +31,154 @@ var migrations = []string{
 	"1732170890_session.up.sql",
 }
 
+//go:embed setup.yaml.example
+var setupExample embed.FS
+
+var generate = flag.Bool("generate", false, "Generate setup.yaml file")
+
 func init() {
 	flag.Usage = usage
 }
 
 func usage() {
-	fmt.Println("Usage: golava-new <project>")
+	fmt.Fprintf(flag.CommandLine.Output(), "Usage: golava-new <project> <moudle-path>\n")
 	flag.PrintDefaults()
 }
 
 func main() {
 	flag.Parse()
 
+	if *generate {
+		generateSetupYaml()
+		return
+	}
+
+	if len(flag.Args()) < 2 {
+		usage()
+		return
+	}
+
 	ctx := context.Background()
 
+	err := readSetupConfig(func(config setup.SetupConfig) error {
+		run(ctx, config)
+		return nil
+	})
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+}
+
+func run(ctx context.Context, config setup.SetupConfig) {
 	// dir := "../golava"
 	// dbType := db.Data["sqlx"]
+	// modulePath := "example.com/golava"
 
 	dir := getProjectDir()
+	dbType := getDBType(config)
+	modulePath := getMoudlePath()
 
 	createProject(dir)
-	setupDotEnvFile(dir)
-	dbType := askDBType()
-	forgeGoFiles(ctx, dir, dbType)
+	setupDotEnvFile(dir, config)
+	forgeGoFiles(ctx, dir, dbType, false)
+	replaceModulePath(dir, modulePath)
 
 	switch dbType.Name {
 	case "ent":
-		runGoGenerateEnt(dir)
+		err := gomod.RunGoGenerateEnt(dir)
+		if err != nil {
+			fmt.Printf("go generate ./ent failed: %s\n", err.Error())
+			return
+		}
 	}
 
-	runGoModTidy(dir)
+	err := gomod.RunGoModTidy(dir)
+	if err != nil {
+		fmt.Printf("go mod tidy failed: %s\n", err.Error())
+		return
+	}
 
 	fmt.Println("Project created successfully")
 }
 
-func setupDotEnvFile(dir string) {
-	createDotEnvFileAndLoad(dir)
-	configureDotEnv(dir)
-	reloadDotEnv(dir)
+func readSetupConfig(reader func(config setup.SetupConfig) error) error {
+	var setupFile io.ReadCloser
+	if _, err := os.Stat("setup.yaml"); errors.Is(err, os.ErrNotExist) {
+		example, err := setupExample.Open("setup.yaml.example")
+		if err != nil {
+			return fmt.Errorf("Open setup.yaml.example failed: %s", err.Error())
+		}
+		defer example.Close()
+
+		fmt.Println("setup.yaml not found, creating one")
+		dest, err := os.Create("setup.yaml")
+		if err != nil {
+			return fmt.Errorf("Create setup.yaml failed: %s", err.Error())
+		}
+		defer dest.Close()
+
+		setupFile = io.NopCloser(io.TeeReader(example, dest))
+	} else {
+		setupFile, err = os.Open("setup.yaml")
+		if err != nil {
+			return fmt.Errorf("Open setup.yaml failed: %s", err.Error())
+		}
+		defer setupFile.Close()
+	}
+
+	config, err := setup.LoadSetupConfig(setupFile)
+	if err != nil {
+		return fmt.Errorf("Load setup config failed: %s", err.Error())
+	}
+
+	return reader(config)
 }
 
-func forgeGoFiles(ctx context.Context, dir string, dbType db.DBType) {
+func generateSetupYaml() {
+	example, err := setupExample.Open("setup.yaml.example")
+	if err != nil {
+		fmt.Printf("Open setup.yaml.example failed: %s\n", err.Error())
+		os.Exit(1)
+	}
+	defer example.Close()
+
+	dest, err := os.Create("setup.yaml")
+	if err != nil {
+		fmt.Printf("Create setup.yaml failed: %s\n", err.Error())
+		os.Exit(1)
+	}
+	defer dest.Close()
+
+	_, err = io.Copy(dest, example)
+	if err != nil {
+		fmt.Printf("Copy setup.yaml.example failed: %s\n", err.Error())
+		os.Exit(1)
+	}
+
+	fmt.Println("setup.yaml file generated")
+	os.Exit(0)
+}
+
+func setupDotEnvFile(dir string, config setup.SetupConfig) {
+	fmt.Println("Setting up .env file...")
+	err := dotenv.SetupDotEnvFile(dir, config)
+	if err != nil {
+		fmt.Printf("Setup .env file failed: %s\n", err.Error())
+		os.Exit(1)
+	}
+	fmt.Println(".env file setup")
+}
+
+func forgeGoFiles(ctx context.Context, dir string, dbType db.DBType, AskOverwrite bool) {
+	fmt.Println("Forging go files...")
 	files, jobs := prepareForges(ctx, dir, dbType)
-	askOverwrite(files)
+	if AskOverwrite {
+		promptOverwriteConfirmation(files)
+	}
 	createFolders(files)
 	doForges(ctx, jobs)
+	fmt.Println("Go files forged")
 }
 
 func createFolders(files []string) {
@@ -92,254 +195,56 @@ func createFolders(files []string) {
 	}
 }
 
-func doForges(ctx context.Context, jobs []func(ctx context.Context) error) {
-	for _, job := range jobs {
-		if err := job(ctx); err != nil {
-			fmt.Printf("%+v\n", err)
-			os.Exit(1)
-		}
-	}
-}
-
-func askOverwrite(files []string) {
-	if !question.AskOverwrite(files) {
-		fmt.Println("Operation aborted")
-		os.Exit(1)
-	}
-}
-
-func prepareForges(ctx context.Context, dir string, dbType db.DBType) ([]string, []func(ctx context.Context) error) {
-	args := forge.ForgeWorkArgs{
-		Dir:      dir,
-		DBType:   dbType,
-		DBDriver: os.Getenv("DB_DRIVER"),
-	}
-
-	workers := forge.ForgeWorkers{
-		stub.ForgeAppGo,
-		stub.ForgeBootstrapApp,
-		stub.ForgeBootstrapSession,
-		stub.ForgeMiddlewareAuth,
-		stub.ForgeRouteHomeRegister,
-	}
-
-	if dbType.Name == "ent" {
-		workers = append(workers,
-			stub.CopyFile("ent.schema.user.stub", "ent/schema/user.go"),
-			stub.CopyFile("ent.generate.stub", "ent/generate.go"),
-			stub.CopyFile("ent.user.wrapper.stub", "internal/entauth/user.go"),
-			stub.CopyFile("ent.userprovider.stub", "internal/entauth/entuserprovider.go"),
-		)
-	}
-
-	driver := args.DBDriver
-	if driver == "sqlite3" {
-		driver = "sqlite"
-	}
-
-	switch driver {
-	case "sqlite", "mysql", "postgres":
-		for _, filename := range migrations {
-			workers = append(
-				workers,
-				stub.CopyFile(
-					fmt.Sprintf("migrations.%s/%s", driver, filename),
-					fmt.Sprintf("database/migrations/%s", filename),
-				),
-			)
-		}
-	}
-
-	files, forges, err := workers.Ready(ctx, args)
-	if err != nil {
-		fmt.Printf("%+v\n", err)
-		os.Exit(1)
-	}
-
-	sort.Strings(files)
-
-	return files, forges
-}
-
-func reloadDotEnv(dir string) {
-	if err := cli.ReloadDotEnv(dir); err != nil {
-		fmt.Printf("%+v\n", err)
-		os.Exit(1)
-	}
-}
-
-func askDBType() db.DBType {
-	dbType, err := question.AskDBType()
-	if err != nil {
-		fmt.Println(err.Error())
+func getDBType(config setup.SetupConfig) db.DBType {
+	dbType, ok := db.Data[config.DB.Type]
+	if !ok {
+		fmt.Printf("DB package %s not supported", config.DB.Type)
 		os.Exit(1)
 	}
 	return dbType
 }
 
-func configureDotEnv(dir string) {
-	err := run(
-		dir,
-
-		question.AskAppName,
-		generateNewAppKey,
-		question.AskDBDriver,
-	)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-}
-
-func createDotEnvFileAndLoad(dir string) {
-	if err := cli.CreateDotEnvFileAndLoad(dir); errors.Is(err, cli.ErrOverwriteRejected) {
-		os.Exit(1)
-	} else if err != nil {
-		fmt.Printf("%+v\n", err)
-		os.Exit(1)
-	}
-}
-
 func getProjectDir() string {
 	dir := strings.TrimSpace(flag.Arg(0))
 	if dir == "" {
-		fmt.Println("Usage: golava-new <project>")
+		usage()
 		os.Exit(1)
 	}
 	return dir
 }
 
-func run(dir string, processes ...func(dir string) error) error {
-	for _, process := range processes {
-		if err := process(dir); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func generateNewAppKey(dir string) error {
-	fmt.Println("Generating new key...")
-	key, err := encryption.GenerateKey()
-	if err != nil {
-		return err
-	}
-
-	err = cli.SetKeyInEnvironmentFile(dir, "APP_KEY", fmt.Sprintf("base64:%s", base64.StdEncoding.EncodeToString(key)))
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("Key generated successfully")
-	return nil
-}
-
-func gitClone(remote string, project string) error {
-	cmd := exec.Command("git", "clone", "--depth=1", "--branch", VERSION, remote, project)
-	return cmd.Run()
-}
-
-func runGoModTidy(dir string) {
-	fmt.Println("Running go mod tidy...")
-
-	cmd := exec.Command("go", "mod", "tidy")
-	cmd.Dir = dir
-	if err := cmd.Run(); err != nil {
-		fmt.Printf("go mod tidy failed: %s\n", err.Error())
+func getMoudlePath() string {
+	modulePath := strings.TrimSpace(flag.Arg(1))
+	if modulePath == "" {
+		usage()
 		os.Exit(1)
 	}
-}
 
-func runGoGenerateEnt(dir string) {
-	fmt.Println("Running go generate ./ent...")
-
-	cmd := exec.Command("go", "generate", "./ent")
-	cmd.Dir = dir
-	if err := cmd.Run(); err != nil {
-		fmt.Printf("go generate ./ent failed: %s\n", err.Error())
+	err := module.CheckPath(modulePath)
+	if err != nil {
+		fmt.Printf("Invalid module path: %s\n", err.Error())
 		os.Exit(1)
 	}
+
+	return modulePath
 }
 
 func createProject(dir string) {
-	zipFile := fmt.Sprintf("golava-%s.zip", VERSION)
-
-	downloadFile(
-		fmt.Sprintf("https://github.com/wolftotem4/golava/archive/refs/tags/%s.zip", VERSION),
-		zipFile,
-	)
-
-	unzipGithubProject(dir, zipFile)
-
-	deleteFile(zipFile)
-}
-
-func unzipGithubProject(dir string, zipFile string) {
-	archive, err := zip.OpenReader(zipFile)
+	fmt.Println("Creating project...")
+	err := remoteProj.CreateProject(dir)
 	if err != nil {
-		fmt.Printf("Open zip file failed: %s\n", err.Error())
+		fmt.Printf("Create project failed: %s\n", err.Error())
 		os.Exit(1)
 	}
-	defer archive.Close()
-
-	pathPrefix := archive.File[0].Name
-
-	for _, file := range archive.File {
-		if file.FileInfo().IsDir() {
-			continue
-		}
-
-		src, err := file.Open()
-		if err != nil {
-			fmt.Printf("Open file failed: %s\n", err.Error())
-			os.Exit(1)
-		}
-		defer src.Close()
-
-		path := strings.TrimPrefix(file.Name, pathPrefix)
-
-		err = os.MkdirAll(filepath.Join(dir, filepath.Dir(path)), os.ModePerm)
-		if err != nil {
-			fmt.Printf("Create folder failed: %s\n", err.Error())
-			os.Exit(1)
-		}
-
-		dst, err := os.Create(filepath.Join(dir, path))
-		if err != nil {
-			fmt.Printf("Create file failed: %s\n", err.Error())
-			os.Exit(1)
-		}
-		defer dst.Close()
-
-		_, err = dst.ReadFrom(src)
-		if err != nil {
-			fmt.Printf("Read file failed: %s\n", err.Error())
-			os.Exit(1)
-		}
-	}
+	fmt.Println("Project created")
 }
 
-func createProjectFolder(dir string) {
-	err := os.Mkdir(dir, os.ModePerm)
+func replaceModulePath(dir, modulePath string) {
+	fmt.Println("Replacing module path...")
+	err := gomod.ReplaceModulePath(dir, modulePath)
 	if err != nil {
-		fmt.Printf("Create project folder failed: %s\n", err.Error())
+		fmt.Printf("Replace module path failed: %s\n", err.Error())
 		os.Exit(1)
 	}
-}
-
-func downloadFile(url string, file string) {
-	if _, err := os.Stat(file); os.IsNotExist(err) {
-		err := cli.Download(url, file)
-		if err != nil {
-			fmt.Printf("Download failed: %s\n", err.Error())
-			os.Exit(1)
-		}
-	}
-}
-
-func deleteFile(file string) {
-	err := os.Remove(file)
-	if err != nil {
-		fmt.Printf("Delete file failed: %s\n", err.Error())
-		os.Exit(1)
-	}
+	fmt.Println("Module path replaced")
 }

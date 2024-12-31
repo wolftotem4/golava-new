@@ -1,4 +1,4 @@
-package cli
+package dotenv
 
 import (
 	"fmt"
@@ -8,11 +8,10 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
+	"github.com/wolftotem4/golava-new/internal/cli"
 )
 
 const DotEnvExample = ".env.example"
-
-var ErrOverwriteRejected = errors.New("overwrite rejected")
 
 func CreateDotEnvFileAndLoad(dir string) error {
 	file := filepath.Join(dir, DotEnvFile)
@@ -20,7 +19,7 @@ func CreateDotEnvFileAndLoad(dir string) error {
 	if _, err := os.Stat(file); err == nil {
 		overwrite := ConfirmDotEnvOverwrite()
 		if !overwrite {
-			return errors.WithStack(ErrOverwriteRejected)
+			return errors.WithStack(cli.ErrOverwriteRejected)
 		}
 
 		if err := CopyEnvFile(dir, true); err != nil {
