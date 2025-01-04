@@ -18,6 +18,7 @@ func InitApp(ctx context.Context) (*app.App, error) {
 	if err != nil {
 		return nil, err
 	}
+	router.BaseURL, _ = url.Parse(os.Getenv("BASE_URL"))
 
 	encrypter, err := initEncryption()
 	if err != nil {
@@ -36,10 +37,16 @@ func InitApp(ctx context.Context) (*app.App, error) {
 		return nil, err
 	}
 
+	loggers, err := initLoggers()
+	if err != nil {
+		return nil, err
+	}
+
 	hasher := hashing.NewHasherManager()
 	cookie := cookie.NewEncryptableCookieManager(initCookie(), encrypter)
 
 	return &app.App{
+		Loggers: loggers,
 		DB: db,{{range .exts}}
 		{{.Name}}: {{.Init}},{{end}}
 		App: golava.App{

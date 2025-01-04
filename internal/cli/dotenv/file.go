@@ -71,5 +71,5 @@ func ConfirmDotEnvOverwrite() bool {
 }
 
 func ReloadDotEnv(dir string) error {
-	return errors.WithStack(godotenv.Load(filepath.Join(dir, DotEnvFile)))
+	return errors.WithStack(godotenv.Overload(filepath.Join(dir, DotEnvFile)))
 }

@@ -21,7 +21,7 @@ import (
 
 var remoteProj = cloneproj.CloneProject{
 	Remote:  "https://github.com/wolftotem4/golava/archive/refs/tags/%s.zip",
-	Version: "v0.1.8",
+	Version: "v0.1.9",
 }
 
 var migrations = []string{

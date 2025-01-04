@@ -21,6 +21,7 @@ func ForgeBootstrapApp(ctx context.Context, args forge.ForgeWorkArgs) (gofile st
 
 		packages := pkg.PackageImports{
 			{Path: "context"},
+			{Path: "net/url"},
 			{Path: "os"},
 			{Path: "github.com/wolftotem4/golava-core/cookie"},
 			{Path: "github.com/wolftotem4/golava-core/golava"},
