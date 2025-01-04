@@ -28,9 +28,10 @@ var DBTypeSQLX = DBType{
 			ConstructUser: func() auth.Authenticatable { return &generic.User{} },
 		}`,
 	MapDBDriver: MapDBDriver{
-		"sqlite":   {Package: pkg.PackageImport{Alias: "_", Path: "modernc.org/sqlite"}, Code: sqlxDBconn},
-		"mysql":    {Package: pkg.PackageImport{Alias: "_", Path: "github.com/go-sql-driver/mysql"}, Code: sqlxDBconn},
-		"postgres": {Package: pkg.PackageImport{Alias: "_", Path: "github.com/lib/pq"}, Code: sqlxDBconn},
+		"sqlite":    {Package: pkg.PackageImport{Alias: "_", Path: "modernc.org/sqlite"}, Code: sqlxDBconn},
+		"mysql":     {Package: pkg.PackageImport{Alias: "_", Path: "github.com/go-sql-driver/mysql"}, Code: sqlxDBconn},
+		"postgres":  {Package: pkg.PackageImport{Alias: "_", Path: "github.com/lib/pq"}, Code: sqlxDBconn},
+		"sqlserver": {Package: pkg.PackageImport{Alias: "_", Path: "github.com/microsoft/go-mssqldb"}, Code: sqlxDBconn},
 	},
 	MapDBSessionHandler: MapDBSessionHandler{
 		"sqlite": {
@@ -44,6 +45,10 @@ var DBTypeSQLX = DBType{
 		"postgres": {
 			Package: pkg.PackageImport{Alias: "sess", Path: "github.com/wolftotem4/golava-core/session/postgres"},
 			Code:    fmt.Sprintf(sqlxDBSessionHandler, "&sess.PostgresSessionHandler"),
+		},
+		"sqlserver": {
+			Package: pkg.PackageImport{Alias: "sess", Path: "github.com/wolftotem4/golava-core/session/sqlserver"},
+			Code:    fmt.Sprintf(sqlxDBSessionHandler, "&sess.SQLServerSessionHandler"),
 		},
 	},
 }
