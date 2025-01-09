@@ -19,7 +19,7 @@ func SetKeyInEnvironmentFile(dir, key, value string) error {
 		return errors.WithStack(err)
 	}
 
-	content, appends := SetEnvVar(content, key, value)
+	content, appends := SetEnvVar(content, key, value, os.Getenv(key))
 	if appends {
 		f, err := os.OpenFile(file, os.O_APPEND|os.O_WRONLY, 0644)
 		if err != nil {
@@ -34,11 +34,14 @@ func SetKeyInEnvironmentFile(dir, key, value string) error {
 	}
 }
 
-func SetEnvVar(content []byte, key, value string) (newcontent []byte, appends bool) {
-	env := string(content)
-	old := os.Getenv(key)
+func SetEnvVar(content []byte, key, value, old string) (newcontent []byte, appends bool) {
+	const space = `[\t\f\v ]*`
+	const unit = space + "%s" + space
+	const regEx = `(?m)^` + unit + `=` + unit + `$`
 
-	r := regexp.MustCompile(fmt.Sprintf(`(?m)^\s*%s\s*=\s*%s.*`, regexp.QuoteMeta(key), regexp.QuoteMeta(old)))
+	env := string(content)
+
+	r := regexp.MustCompile(fmt.Sprintf(regEx, regexp.QuoteMeta(key), regexp.QuoteMeta(old)))
 
 	if r.MatchString(env) {
 		newEnv := r.ReplaceAllString(env, fmt.Sprintf("%s=%s", key, value))
