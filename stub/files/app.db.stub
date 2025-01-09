@@ -7,7 +7,7 @@ import (
 type App struct {
 	golava.App
 
-	Loggers *Loggers
+	L  *logging.LoggerManager
 	DB {{.dbType}}{{range .exts}}
 	{{.Name}} {{.Declare}}{{end}}
 }

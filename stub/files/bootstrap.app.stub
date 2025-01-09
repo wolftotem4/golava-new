@@ -37,16 +37,11 @@ func InitApp(ctx context.Context) (*app.App, error) {
 		return nil, err
 	}
 
-	loggers, err := initLoggers()
-	if err != nil {
-		return nil, err
-	}
-
 	hasher := hashing.NewHasherManager()
 	cookie := cookie.NewEncryptableCookieManager(initCookie(), encrypter)
 
 	return &app.App{
-		Loggers: loggers,
+		L:  logging.NewLoggerManager(),
 		DB: db,{{range .exts}}
 		{{.Name}}: {{.Init}},{{end}}
 		App: golava.App{

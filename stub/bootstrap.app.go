@@ -29,6 +29,7 @@ func ForgeBootstrapApp(ctx context.Context, args forge.ForgeWorkArgs) (gofile st
 			{Path: "github.com/wolftotem4/golava-core/routing"},
 			{Path: "github.com/wolftotem4/golava/internal/app"},
 			{Path: "github.com/wolftotem4/golava/internal/env"},
+			{Path: "github.com/wolftotem4/golava/internal/logging"},
 			args.DBType.Package,
 			args.DBType.MapDBDriver[driverName].Package,
 		}

@@ -19,6 +19,7 @@ func ForgeAppGo(ctx context.Context, args forge.ForgeWorkArgs) (gofile string, f
 
 		packages := pkg.PackageImports{
 			{Path: "github.com/wolftotem4/golava-core/golava"},
+			{Path: "github.com/wolftotem4/golava/internal/logging"},
 			args.DBType.Package,
 		}
 
