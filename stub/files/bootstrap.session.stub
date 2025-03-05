@@ -4,13 +4,13 @@ import (
 {{.packages}}
 )
 
-func initSession(db {{.dbType}}) (*session.SessionFactory, error) {
+func InitSession(db {{.dbType}}, table string) (*session.SessionFactory, error) {
 	{{.sessHandler}}
 
 	return &session.SessionFactory{
 		Name:     env.Get("SESSION_COOKIE", "app_session"),
 		Lifetime: getSessionLifetime(),
-		HttpOnly: env.Bool(os.Getenv("SESSION_HTTP_ONLY")),
+		HttpOnly: env.Bool(env.Get("SESSION_HTTP_ONLY", "true")),
 		Handler:  handler,
 	}, nil
 }

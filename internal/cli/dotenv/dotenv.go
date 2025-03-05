@@ -10,6 +10,6 @@ func ConfigureDotEnv(dir string, config setup.SetupConfig) error {
 		return err
 	}
 
-	err = SetupDBDriver(dir, config)
+	err = SetupDBSettings(dir, config)
 	return err
 }

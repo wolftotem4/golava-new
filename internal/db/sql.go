@@ -8,4 +8,4 @@ const sqlDBconn = `db, err := sql.Open(os.Getenv("DB_DRIVER"), os.Getenv("DB_DSN
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(10)`
 
-var sqlDBSessionHandler = `handler := %s{DB: db}`
+var sqlDBSessionHandler = `handler := %s(db, table)`

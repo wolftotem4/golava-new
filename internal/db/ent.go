@@ -13,8 +13,8 @@ var DBTypeEnt = DBType{
 	Package:             pkg.PackageImport{Path: "database/sql"},
 	UserProviderPackage: pkg.PackageImport{Path: "github.com/wolftotem4/golava/internal/entauth"},
 	UserProvider: `&entauth.EntUserProvider{
-			Hasher: app.Hashing,
-			Ent:    app.Ent,
+			Hasher: a.Hashing,
+			Ent:    a.Ent,
 		}`,
 	MapDBDriver: MapDBDriver{
 		"sqlite":   {Package: pkg.PackageImport{Alias: "_", Path: "modernc.org/sqlite"}, Code: sqlDBconn},
@@ -24,20 +24,20 @@ var DBTypeEnt = DBType{
 	MapDBSessionHandler: MapDBSessionHandler{
 		"sqlite": {
 			Package: pkg.PackageImport{Alias: "sess", Path: "github.com/wolftotem4/golava-core/session/sqlite"},
-			Code:    fmt.Sprintf(sqlDBSessionHandler, "&sess.SqliteSessionHandler"),
+			Code:    fmt.Sprintf(sqlDBSessionHandler, "sess.NewSqliteSessionHandler"),
 		},
 		"mysql": {
 			Package: pkg.PackageImport{Alias: "sess", Path: "github.com/wolftotem4/golava-core/session/mysql"},
-			Code:    fmt.Sprintf(sqlDBSessionHandler, "&sess.MySQLSessionHandler"),
+			Code:    fmt.Sprintf(sqlDBSessionHandler, "sess.NewMySQLSessionHandler"),
 		},
 		"postgres": {
 			Package: pkg.PackageImport{Alias: "sess", Path: "github.com/wolftotem4/golava-core/session/postgres"},
-			Code:    fmt.Sprintf(sqlDBSessionHandler, "&sess.PostgresSessionHandler"),
+			Code:    fmt.Sprintf(sqlDBSessionHandler, "sess.NewPostgresSessionHandler"),
 		},
 	},
 	AppExts: []app.AppExt{
 		{
-			Packages: pkg.PackageImports{{Path: "github.com/wolftotem4/golava/ent"}},
+			Packages: pkg.PackageImports{{Path: "github.com/wolftotem4/golava/database/ent"}},
 			InitPkgs: pkg.PackageImports{{Alias: "entsql", Path: "entgo.io/ent/dialect/sql"}},
 			Declare:  "*ent.Client",
 			Name:     "Ent",

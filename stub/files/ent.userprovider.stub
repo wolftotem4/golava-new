@@ -6,8 +6,8 @@ import (
 
 	"github.com/wolftotem4/golava-core/auth"
 	"github.com/wolftotem4/golava-core/hashing"
-	"github.com/wolftotem4/golava/ent"
-	"github.com/wolftotem4/golava/ent/user"
+	"github.com/wolftotem4/golava/database/ent"
+	"github.com/wolftotem4/golava/database/ent/user"
 )
 
 type EntUserProvider struct {

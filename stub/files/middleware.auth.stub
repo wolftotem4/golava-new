@@ -12,22 +12,23 @@ func WebAuth(c *gin.Context) {
 	)
 
 	var (
-		instance = instance.MustGetInstance(c)
-		app      = instance.App.(*app.App)
+		i = instance.MustGetInstance(c)
+		a = i.App.(*app.App)
 	)
 
 	guard := &generic.SessionGuard{
 		Name:             "app",
-		Session:          instance.Session,
-		Cookie:           app.Cookie,
-		Hasher:           app.Hashing,
+		Session:          i.Session,
+		Cookie:           i.Cookie,
+		Hasher:           a.Hashing,
 		RememberDuration: 400 * DAY,
 		Provider: {{.userProvider}},
+		RecallerIdMorph: auth.IntId,
 
 		Request: c.Request,
 	}
 
-	instance.Auth = guard
+	i.Auth = guard
 
 	err := guard.RestoreAuth(c)
 	if err != nil {

@@ -4,3 +4,17 @@ db:
 
   # Specify the type of DB package you want to use (sqlx/gorm/ent)
   type: sqlx
+
+  # Specify the connection to the database
+  connections:
+    sqlite:
+      # Path to the sqlite database file
+      dsn: db.sqlite?_pragma=foreign_keys(1)
+
+    mysql:
+      # Connection string for MySQL
+      dsn: root:password@tcp(127.0.0.1:3306)/test?charset=utf8mb4&parseTime=True&loc=Local
+
+    postgres:
+      # Connection string for Postgres
+      dsn: host=localhost user=postgres password=password dbname=test port=5432 sslmode=disable

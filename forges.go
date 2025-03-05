@@ -29,8 +29,8 @@ func prepareForges(ctx context.Context, dir string, dbType db.DBType) ([]string,
 
 	if dbType.Name == "ent" {
 		workers = append(workers,
-			stub.CopyFile("ent.schema.user.stub", "ent/schema/user.go"),
-			stub.CopyFile("ent.generate.stub", "ent/generate.go"),
+			stub.CopyFile("ent.schema.user.stub", "database/ent/schema/user.go"),
+			stub.CopyFile("ent.generate.stub", "database/ent/generate.go"),
 			stub.CopyFile("ent.user.wrapper.stub", "internal/entauth/user.go"),
 			stub.CopyFile("ent.userprovider.stub", "internal/entauth/entuserprovider.go"),
 		)

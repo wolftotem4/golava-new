@@ -1,6 +1,6 @@
 package entauth
 
-import "github.com/wolftotem4/golava/ent"
+import "github.com/wolftotem4/golava/database/ent"
 
 type User struct {
 	*ent.User

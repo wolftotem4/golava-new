@@ -27,34 +27,24 @@ func InitApp(ctx context.Context) (*app.App, error) {
 
 	{{.dbConn}}
 
-	session, err := initSession(db)
-	if err != nil {
-		return nil, err
-	}
-
 	translation, err := initTranslation(locale)
 	if err != nil {
 		return nil, err
 	}
-
-	hasher := hashing.NewHasherManager()
-	cookie := cookie.NewEncryptableCookieManager(initCookie(), encrypter)
 
 	return &app.App{
 		L:  logging.NewLoggerManager(),
 		DB: db,{{range .exts}}
 		{{.Name}}: {{.Init}},{{end}}
 		App: golava.App{
-			Name:           os.Getenv("APP_NAME"),
-			Debug:          debug,
-			AppKey:         appKey,
-			Router:         router,
-			Cookie:         cookie,
-			Encryption:     encrypter,
-			Hashing:        hasher,
-			SessionFactory: session,
-			Translation:    translation,
-			AppLocale:      locale,
+			Name:        os.Getenv("APP_NAME"),
+			Debug:       debug,
+			AppKey:      appKey,
+			Router:      router,
+			Encryption:  encrypter,
+			Hashing:     hashing.NewHasherManager(),
+			Translation: translation,
+			AppLocale:   locale,
 		},
 	}, nil
 }

@@ -21,7 +21,7 @@ import (
 
 var remoteProj = cloneproj.CloneProject{
 	Remote:  "https://github.com/wolftotem4/golava/archive/refs/tags/%s.zip",
-	Version: "v0.1.10",
+	Version: "v0.1.11",
 }
 
 var migrations = []string{
@@ -85,6 +85,19 @@ func run(ctx context.Context, config setup.SetupConfig) {
 	replaceModulePath(dir, modulePath)
 
 	switch dbType.Name {
+	case "gorm":
+		err := gomod.RunGoGet(dir, "gorm.io/gorm")
+		if err != nil {
+			fmt.Printf("go get gorm.io/gorm failed: %s\n", err.Error())
+			return
+		}
+
+		driver := db.DBTypeGORM.MapDBDriver[config.DB.Driver].Package.Path
+		err = gomod.RunGoGet(dir, driver)
+		if err != nil {
+			fmt.Printf("go get %s failed: %s\n", driver, err.Error())
+			return
+		}
 	case "ent":
 		err := gomod.RunGoGenerateEnt(dir)
 		if err != nil {

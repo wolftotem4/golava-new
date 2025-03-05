@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 
 	"github.com/wolftotem4/golava-new/internal/forge"
@@ -20,14 +19,11 @@ func ForgeMiddlewareAuth(ctx context.Context, args forge.ForgeWorkArgs) (gofile 
 
 		packages := pkg.PackageImports{
 			{Path: "github.com/gin-gonic/gin"},
+			{Path: "github.com/wolftotem4/golava-core/auth"},
 			{Path: "github.com/wolftotem4/golava-core/auth/generic"},
 			{Path: "github.com/wolftotem4/golava-core/instance"},
 			{Path: "github.com/wolftotem4/golava/internal/app"},
 			args.DBType.UserProviderPackage,
-		}
-
-		if hasAuth(args.DBType.UserProvider) {
-			packages = append(packages, pkg.PackageImport{Path: "github.com/wolftotem4/golava-core/auth"})
 		}
 
 		sort.Sort(packages)
@@ -37,8 +33,4 @@ func ForgeMiddlewareAuth(ctx context.Context, args forge.ForgeWorkArgs) (gofile 
 			"userProvider": args.DBType.UserProvider,
 		})
 	}, nil
-}
-
-func hasAuth(content string) bool {
-	return regexp.MustCompile(`\bauth\.`).MatchString(content)
 }

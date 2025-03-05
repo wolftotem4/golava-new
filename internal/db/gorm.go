@@ -15,7 +15,7 @@ var gormDBSessionHandler = `native, err := db.DB()
 	if err != nil {
 		return nil, err
 	}
-	handler := %s{DB: native}`
+	handler := %s(native, table)`
 
 var DBTypeGORM = DBType{
 	Name:                "gorm",
@@ -23,8 +23,8 @@ var DBTypeGORM = DBType{
 	Package:             pkg.PackageImport{Path: "gorm.io/gorm"},
 	UserProviderPackage: pkg.PackageImport{Alias: "db", Path: "github.com/wolftotem4/golava-db-gorm"},
 	UserProvider: `&db.GormUserProvider{
-			Hasher:        app.Hashing,
-			DB:            app.DB,
+			Hasher:        a.Hashing,
+			DB:            a.DB,
 			ConstructUser: func() auth.Authenticatable { return &generic.User{} },
 		}`,
 	MapDBDriver: MapDBDriver{
@@ -36,19 +36,19 @@ var DBTypeGORM = DBType{
 	MapDBSessionHandler: MapDBSessionHandler{
 		"sqlite": {
 			Package: pkg.PackageImport{Alias: "sess", Path: "github.com/wolftotem4/golava-core/session/sqlite"},
-			Code:    fmt.Sprintf(gormDBSessionHandler, "&sess.SqliteSessionHandler"),
+			Code:    fmt.Sprintf(gormDBSessionHandler, "sess.NewSqliteSessionHandler"),
 		},
 		"mysql": {
 			Package: pkg.PackageImport{Alias: "sess", Path: "github.com/wolftotem4/golava-core/session/mysql"},
-			Code:    fmt.Sprintf(gormDBSessionHandler, "&sess.MySQLSessionHandler"),
+			Code:    fmt.Sprintf(gormDBSessionHandler, "sess.NewMySQLSessionHandler"),
 		},
 		"postgres": {
 			Package: pkg.PackageImport{Alias: "sess", Path: "github.com/wolftotem4/golava-core/session/postgres"},
-			Code:    fmt.Sprintf(gormDBSessionHandler, "&sess.PostgresSessionHandler"),
+			Code:    fmt.Sprintf(gormDBSessionHandler, "sess.NewPostgresSessionHandler"),
 		},
 		"sqlserver": {
 			Package: pkg.PackageImport{Alias: "sess", Path: "github.com/wolftotem4/golava-core/session/sqlserver"},
-			Code:    fmt.Sprintf(gormDBSessionHandler, "&sess.SQLServerSessionHandler"),
+			Code:    fmt.Sprintf(gormDBSessionHandler, "sess.NewSQLServerSessionHandler"),
 		},
 	},
 }

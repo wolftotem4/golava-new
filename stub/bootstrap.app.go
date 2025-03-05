@@ -23,7 +23,6 @@ func ForgeBootstrapApp(ctx context.Context, args forge.ForgeWorkArgs) (gofile st
 			{Path: "context"},
 			{Path: "net/url"},
 			{Path: "os"},
-			{Path: "github.com/wolftotem4/golava-core/cookie"},
 			{Path: "github.com/wolftotem4/golava-core/golava"},
 			{Path: "github.com/wolftotem4/golava-core/hashing"},
 			{Path: "github.com/wolftotem4/golava-core/routing"},

@@ -14,7 +14,7 @@ const sqlxDBconn = `db, err := sqlx.Open(os.Getenv("DB_DRIVER"), os.Getenv("DB_D
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(10)`
 
-var sqlxDBSessionHandler = `handler := %s{DB: db.DB}`
+var sqlxDBSessionHandler = `handler := %s(db.DB, table)`
 
 var DBTypeSQLX = DBType{
 	Name:                "sqlx",
@@ -22,9 +22,9 @@ var DBTypeSQLX = DBType{
 	Package:             pkg.PackageImport{Path: "github.com/jmoiron/sqlx"},
 	UserProviderPackage: pkg.PackageImport{Alias: "db", Path: "github.com/wolftotem4/golava-db-sqlx"},
 	UserProvider: `&db.SqlxUserProvider{
-			Hasher:        app.Hashing,
+			Hasher:        a.Hashing,
 			Table:         "users",
-			DB:            app.DB,
+			DB:            a.DB,
 			ConstructUser: func() auth.Authenticatable { return &generic.User{} },
 		}`,
 	MapDBDriver: MapDBDriver{
@@ -36,19 +36,19 @@ var DBTypeSQLX = DBType{
 	MapDBSessionHandler: MapDBSessionHandler{
 		"sqlite": {
 			Package: pkg.PackageImport{Alias: "sess", Path: "github.com/wolftotem4/golava-core/session/sqlite"},
-			Code:    fmt.Sprintf(sqlxDBSessionHandler, "&sess.SqliteSessionHandler"),
+			Code:    fmt.Sprintf(sqlxDBSessionHandler, "sess.NewSqliteSessionHandler"),
 		},
 		"mysql": {
 			Package: pkg.PackageImport{Alias: "sess", Path: "github.com/wolftotem4/golava-core/session/mysql"},
-			Code:    fmt.Sprintf(sqlxDBSessionHandler, "&sess.MySQLSessionHandler"),
+			Code:    fmt.Sprintf(sqlxDBSessionHandler, "sess.NewMySQLSessionHandler"),
 		},
 		"postgres": {
 			Package: pkg.PackageImport{Alias: "sess", Path: "github.com/wolftotem4/golava-core/session/postgres"},
-			Code:    fmt.Sprintf(sqlxDBSessionHandler, "&sess.PostgresSessionHandler"),
+			Code:    fmt.Sprintf(sqlxDBSessionHandler, "sess.NewPostgresSessionHandler"),
 		},
 		"sqlserver": {
 			Package: pkg.PackageImport{Alias: "sess", Path: "github.com/wolftotem4/golava-core/session/sqlserver"},
-			Code:    fmt.Sprintf(sqlxDBSessionHandler, "&sess.SQLServerSessionHandler"),
+			Code:    fmt.Sprintf(sqlxDBSessionHandler, "sess.NewSQLServerSessionHandler"),
 		},
 	},
 }
